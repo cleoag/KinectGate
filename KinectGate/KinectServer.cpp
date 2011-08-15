@@ -1,10 +1,20 @@
+#include "StdAfx.h"
+
+#include <ws2tcpip.h>
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <iostream>
+#include <conio.h>
 #include "KinectServer.h"
+
+
+#pragma comment (lib, "Ws2_32.lib")
+
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "27015"
 
-
-callback ServerCallback;
 
 WSADATA wsaData;
 SOCKET ListenSocket = INVALID_SOCKET,
@@ -14,11 +24,9 @@ char recvbuf[DEFAULT_BUFLEN];
 int iResult, iSendResult;
 int recvbuflen = DEFAULT_BUFLEN;
 
-int KinectServer::init(callback cb){
+int KinectServer::init(){
 
-	ServerCallback = cb;
 	initServer();
-	waitForConnection();
 
 	return 0;
 }
@@ -47,7 +55,7 @@ int KinectServer::initServer(){
 		return 1;
 	}
 
-	printf("create socket");
+	printf(":: create socket server...\n");
 	// Create a SOCKET for connecting to server
 	ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (ListenSocket == INVALID_SOCKET) {
@@ -76,32 +84,39 @@ int KinectServer::initServer(){
 		return 1;
 	}
 
-	closesocket(ListenSocket);
+	printf(": socket server created...\n\n");
+
+	//closesocket(ListenSocket);
 
 	return 0;
 }
 
-int KinectServer::sendData(int mixedData, int dataSize){
+bool KinectServer::sendData(int mixedData[], int dataSize){
 	iSendResult = send( ClientSocket, (char *) mixedData, dataSize, 0 );
 	if (iSendResult == SOCKET_ERROR) {
 		printf("send failed with error: %d\n", WSAGetLastError());
 		closesocket(ClientSocket);
 		WSACleanup();
-		return 1;
+		return false;
 	}
-	return 0;
+	return true;
 }
 
-void KinectServer::waitForConnection(){
+bool KinectServer::waitForConnection(){
+
+	printf (":: wait for connection...\n");
+
 	ClientSocket = accept(ListenSocket, NULL, NULL);
 	if (ClientSocket == INVALID_SOCKET) {
 		printf("accept failed with error: %d\n", WSAGetLastError());
-		closesocket(ListenSocket);
+		closesocket(ClientSocket);
 		WSACleanup();
+		return false;
 	}
-	printf("client connected...\n");
+	printf(": client connected...\n\n");
 
-	ServerCallback();
+	return true;
+
 }
 
 void KinectServer::closeConnection(){

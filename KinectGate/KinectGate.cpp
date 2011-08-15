@@ -13,11 +13,10 @@ int mixedData[(NUI_SKELETON_POSITION_COUNT+1)*6*4+4];
 HRESULT    hr;
 POINT         m_Points[NUI_SKELETON_POSITION_COUNT];
 
-int			trackedCount = 0;
-
-int           m_LastSkeletonFoundTime;
-bool          m_bScreenBlanked;
-
+int		trackedCount = 0;
+int		m_LastSkeletonFoundTime;
+bool	m_bScreenBlanked;
+bool	isClientConnected = false;
 
 void GrabSkeleton()
 {
@@ -111,8 +110,8 @@ void initKinect(){
 	} else {
 		printf("NuiInitialize OK!\n");
 	}
-	hr = NuiCameraElevationSetAngle(NUI_CAMERA_ELEVATION_MAXIMUM);
-	hr = NuiCameraElevationSetAngle(0);
+//	hr = NuiCameraElevationSetAngle(NUI_CAMERA_ELEVATION_MAXIMUM);
+//	hr = NuiCameraElevationSetAngle(0);
 
 	hr = NuiSkeletonTrackingEnable(NULL,0);
 	if( FAILED( hr ) )
@@ -126,30 +125,29 @@ void initKinect(){
 
 }
 
-void serverConnected() {
-	printf("server connected\n");
-}
-
 int __cdecl main(int argc, char *argv[]) {
 
 	initKinect();
 
 	server = KinectServer();
-	server.init(serverConnected);
+	server.init();
+	isClientConnected = server.waitForConnection();
 
-	do {
-		GrabSkeleton();
+	while (1){
 
-		long dataSize = 4+(NUI_SKELETON_POSITION_COUNT+1)*4*6;
-		int res = server.sendData(mixedData,dataSize);
-		if (res == 1) {
-		//	break;
+		 while (isClientConnected) {
+			GrabSkeleton();
+
+			long dataSize = 4+(NUI_SKELETON_POSITION_COUNT+1)*4*6;
+			isClientConnected = server.sendData(mixedData,dataSize);
 		}
 
-	} while (1);
+
+
+	isClientConnected = server.waitForConnection();
+	}
 
 	server.closeConnection();
 
 	return 0;
 }
-
